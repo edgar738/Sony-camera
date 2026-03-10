@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SONY FX3 Cinema</title>
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="FX3">
+<link rel="manifest" id="manifestLink">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #181818;
+  --sony-orange: #ff6a00;
+  --sony-white: #f0f0f0;
+  --sony-silver: #888;
+  --sony-dim: #444;
+  --sony-red: #e63327;
+  --border: rgba(255,255,255,0.07);
+  --gold: #c8a050;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  width:100%; min-height:100vh;
+  background: var(--bg);
+  color: var(--sony-white);
+  font-family: 'Courier New', Courier, monospace;
+  overscroll-behavior: none;
+}
+
+/* scanline grain */
+body::after {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:998;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+}
+
+/* ── HEADER ── */
+.header {
+  background: #000;
+  height: 52px;
+  display: flex; align-items:center; justify-content:space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255,106,0,0.3);
+  position: sticky; top:0; z-index:100;
+}
+
+.sony-brand { display:flex; align-items:center; gap:10px; }
+
+.sony-logo {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #fff;
+  font-family: 'Arial Black', sans-serif;
+}
+
+.fx3-badge {
+  background: var(--sony-orange);
+  color: #000;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.rec-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--sony-red);
+  box-shadow: 0 0 8px var(--sony-red);
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.header-info {
+  text-align: right;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: var(--sony-silver);
+  line-height: 1.6;
+}
+
+/* ── VIEWFINDER ── */
+.vf-wrap {
+  position: relative;
+  margin: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 16/9;
+  border: 1px solid rgba(255,106,0,0.2);
+  box-shadow: 0 0 40px rgba(255,106,0,0.05), 0 20px 60px rgba(0,0,0,0.8);
+  cursor: pointer;
+}
+
+canvas#main { width:100%; height:100%; display:block; }
+
+/* Cinema aspect ratio bars */
+.cinema-bar {
+  position: absolute; left:0; right:0; height: 8%;
+  background: #000; pointer-events:none; z-index:5;
+}
+.cinema-bar.top { top:0; }
+.cinema-bar.bot { bottom:0; }
+
+/* VF corners */
+.vfc {
+  position:absolute; width:18px; height:18px;
+  border-color: rgba(255,106,0,0.6); border-style:solid;
+  pointer-events:none; z-index:6;
+}
+.vfc.tl{top:10%;left:10px;border-width:1px 0 0 1px;}
+.vfc.tr{top:10%;right:10px;border-width:1px 1px 0 0;}
+.vfc.bl{bottom:10%;left:10px;border-width:0 0 1px 1px;}
+.vfc.br{bottom:10%;right:10px;border-width:0 1px 1px 0;}
+
+/* Focus peaking overlay */
+.focus-zone {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  pointer-events:none; z-index:6;
+  transition: all 0.3s;
+}
+.focus-ring-outer {
+  width: 70px; height: 70px;
+  border: 1px solid rgba(255,106,0,0.4);
+  border-radius: 50%;
+}
+.focus-ring-inner {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width: 8px; height: 8px;
+  border: 1px solid rgba(255,106,0,0.8);
+  border-radius: 50%;
+}
+.focus-cross-h {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:20px; height:1px;
+  background: rgba(255,106,0,0.5);
+}
+.focus-cross-v {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:1px; height:20px;
+  background: rgba(255,106,0,0.5);
+}
+
+/* HUD overlay */
+.hud {
+  position:absolute; bottom:10%; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:flex-end;
+  padding: 0 14px;
+  pointer-events:none; z-index:6;
+  font-size: 8px; letter-spacing:1.5px;
+  color: rgba(255,255,255,0.7);
+}
+.hud-left, .hud-right { display:flex; flex-direction:column; gap:2px; }
+.hud-right { text-align:right; }
+.hud-stock {
+  font-size: 10px; font-weight:700;
+  color: var(--sony-orange);
+  letter-spacing:2px;
+}
+
+/* Empty state */
+.empty {
+  position:absolute; inset:0; z-index:10;
+  background:#000;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; cursor:pointer;
+  transition: background 0.3s;
+}
+.empty:hover { background:#080808; }
+
+.lens-graphic {
+  position:relative; width:72px; height:72px;
+}
+.lg-ring {
+  position:absolute; inset:0;
+  border-radius:50%;
+  border: 1.5px solid rgba(255,106,0,0.3);
+  animation: spin 8s linear infinite;
+}
+.lg-ring:nth-child(2) {
+  inset:8px;
+  border-color: rgba(255,106,0,0.5);
+  animation-direction: reverse;
+  animation-duration: 5s;
+}
+.lg-ring:nth-child(3) {
+  inset:20px;
+  border-color: rgba(255,106,0,0.8);
+  border-top-color: var(--sony-orange);
+  animation-duration: 3s;
+}
+.lg-center {
+  position:absolute; inset:32px;
+  background: var(--sony-orange);
+  border-radius:50%;
+  opacity:0.6;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-label { font-size:9px; letter-spacing:4px; color:rgba(255,255,255,0.3); }
+.empty-sub   { font-size:7px; letter-spacing:2px; color:rgba(255,255,255,0.15); }
+
+/* ── MODO SELECTOR ── */
+.mode-tabs {
+  display:flex; margin: 0 12px 12px;
+  background: var(--surface);
+  border-radius:4px;
+  border: 1px solid var(--border);
+  overflow:hidden;
+}
+
+.mode-tab {
+  flex:1; padding:10px 4px;
+  font-family:'Courier New',monospace;
+  font-size:8px; letter-spacing:2px;
+  color: var(--sony-silver);
+  background:transparent; border:none;
+  cursor:pointer; transition:all 0.2s;
+  text-align:center; text-transform:uppercase;
+}
+.mode-tab.active {
+  background: var(--sony-orange);
+  color: #000; font-weight:700;
+}
+
+/* ── PANEL SECTIONS ── */
+.panel { margin: 0 12px 12px; }
+
+.panel-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:10px;
+}
+.panel-title {
+  font-size:7px; letter-spacing:3px; color:var(--sony-silver);
+  text-transform:uppercase; white-space:nowrap;
+}
+.panel-line { flex:1; height:1px; background:var(--border); }
+
+/* ── FILM STOCKS ── */
+.stocks-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap:7px;
+}
+
+.stock-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius:4px;
+  padding: 8px 6px;
+  cursor:pointer; transition:all 0.2s;
+  text-align:center; position:relative; overflow:hidden;
+}
+.stock-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:2px;
+  background: var(--stock-color,#555);
+  opacity:0; transition:opacity 0.2s;
+}
+.stock-card.active {
+  border-color: var(--stock-color,#555);
+  background: rgba(255,255,255,0.03);
+}
+.stock-card.active::before { opacity:1; }
+
+.stock-swatch {
+  width:32px; height:20px; border-radius:2px; margin:0 auto 5px;
+  border:1px solid rgba(255,255,255,0.05);
+}
+.stock-name { font-size:7px; font-weight:700; letter-spacing:0.5px; color:var(--sony-white); }
+.stock-sub  { font-size:6px; color:var(--sony-silver); margin-top:1px; }
+
+/* ── SLIDERS ── */
+.sliders-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+.ctrl {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius:4px; padding:10px;
+}
+.ctrl-head {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:7px;
+}
+.ctrl-lbl { font-size:7px; letter-spacing:2px; color:var(--sony-silver); }
+.ctrl-val { font-size:12px; font-weight:700; color:var(--sony-orange); }
+
+input[type=range] {
+  -webkit-appearance:none; width:100%; height:2px;
+  background: var(--border); border-radius:2px; outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:14px; height:14px;
+  border-radius:50%; background:#fff;
+  border:2px solid var(--bg);
+  box-shadow:0 0 0 1.5px var(--sony-orange), 0 2px 8px rgba(0,0,0,0.5);
+  transition:transform 0.15s;
+}
+input[type=range]:active::-webkit-slider-thumb { transform:scale(1.3); }
+
+/* ── FOCUS PANEL ── */
+.focus-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius:4px; padding:12px;
+  margin-bottom:8px;
+}
+
+.focus-diagram {
+  position:relative; height:48px;
+  background: #0d0d0d;
+  border-radius:3px; margin-bottom:10px;
+  overflow:hidden; border:1px solid var(--border);
+}
+
+.focus-bg-gradient {
+  position:absolute; inset:0;
+  background: linear-gradient(90deg,
+    rgba(255,106,0,0.0) 0%,
+    rgba(255,106,0,0.0) var(--fl,30%),
+    rgba(255,106,0,0.25) var(--fc,45%),
+    rgba(255,106,0,0.4) 50%,
+    rgba(255,106,0,0.25) var(--fc2,55%),
+    rgba(255,106,0,0.0) var(--fr,70%),
+    rgba(255,106,0,0.0) 100%
+  );
+  transition: all 0.1s;
+}
+
+.focus-needle {
+  position:absolute; top:0; bottom:0; width:2px;
+  background: var(--sony-orange);
+  left: 50%; transform:translateX(-50%);
+  box-shadow:0 0 8px var(--sony-orange);
+  transition: left 0.05s;
+}
+
+.focus-ruler {
+  position:absolute; bottom:0; left:0; right:0;
+  height:8px; display:flex; justify-content:space-between; align-items:flex-end;
+  padding:0 4px;
+}
+.ruler-tick {
+  width:1px; height:4px; background:rgba(255,255,255,0.15);
+}
+.ruler-tick.major { height:7px; background:rgba(255,255,255,0.3); }
+
+.focus-labels {
+  display:flex; justify-content:space-between;
+  font-size:7px; letter-spacing:1px; color:var(--sony-silver);
+  margin-bottom:8px;
+}
+.focus-dist { color:var(--sony-orange); font-weight:700; font-size:11px; }
+
+.focus-slider-row { display:flex; align-items:center; gap:10px; }
+.focus-slider-lbl { font-size:7px; letter-spacing:1.5px; color:var(--sony-silver); width:42px; }
+.focus-slider-row input[type=range] { flex:1; }
+
+/* Apertura visual */
+.aperture-ring {
+  display:flex; justify-content:center; margin:10px 0;
+  gap:6px; align-items:center;
+}
+.aper-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius:3px; padding:6px 10px;
+  font-size:9px; letter-spacing:1px; color:var(--sony-silver);
+  cursor:pointer; transition:all 0.15s; font-family:'Courier New',monospace;
+}
+.aper-btn.active {
+  background: var(--sony-orange);
+  border-color: var(--sony-orange);
+  color:#000; font-weight:700;
+}
+
+/* ── SENSOR PANEL ── */
+.sensor-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+.sensor-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius:4px; padding:10px;
+  cursor:pointer; transition:all 0.2s;
+  text-align:center;
+}
+.sensor-card.active {
+  border-color: var(--sony-orange);
+  background: rgba(255,106,0,0.06);
+}
+.sensor-icon { font-size:20px; margin-bottom:4px; }
+.sensor-name { font-size:8px; font-weight:700; letter-spacing:1px; color:var(--sony-white); }
+.sensor-spec { font-size:6px; color:var(--sony-silver); margin-top:2px; letter-spacing:0.5px; }
+
+/* ── EFFECTS TOGGLES ── */
+.fx-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+
+.fx-btn {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:4px; padding:9px 4px;
+  cursor:pointer; transition:all 0.2s;
+  font-family:'Courier New',monospace; font-size:7px;
+  letter-spacing:0.5px; color:var(--sony-silver); text-align:center;
+}
+.fx-btn.active {
+  background:rgba(255,106,0,0.1);
+  border-color:var(--sony-orange);
+  color:var(--sony-orange);
+}
+.fx-icon { font-size:13px; display:block; margin-bottom:3px; }
+
+/* ── INFO STRIP ── */
+.info-strip {
+  margin: 0 12px 12px;
+  background: #000;
+  border: 1px solid rgba(255,106,0,0.2);
+  border-radius:4px; padding:10px 14px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.info-item { text-align:center; }
+.info-key { font-size:6px; letter-spacing:2px; color:rgba(255,255,255,0.25); display:block; }
+.info-val { font-size:12px; font-weight:700; letter-spacing:1px; color:rgba(255,255,255,0.85); }
+.info-sep { width:1px; height:22px; background:rgba(255,106,0,0.2); }
+
+/* ── ACTIONS ── */
+.actions {
+  margin: 0 12px 24px;
+  display:flex; gap:8px;
+}
+.btn-load {
+  flex:1; background:var(--surface); border:1.5px solid var(--border);
+  border-radius:4px; padding:14px;
+  font-family:'Courier New',monospace; font-size:8px; letter-spacing:2px;
+  color:var(--sony-white); cursor:pointer; transition:all 0.2s;
+}
+.btn-load:hover { border-color:var(--sony-silver); }
+.btn-save {
+  flex:2; background:var(--sony-orange); border:none;
+  border-radius:4px; padding:14px;
+  font-family:'Courier New',monospace; font-size:8px; letter-spacing:2px;
+  color:#000; font-weight:700; cursor:pointer; transition:all 0.2s;
+  box-shadow:0 4px 20px rgba(255,106,0,0.3);
+}
+.btn-save:hover { background:#ff7a1a; }
+.btn-save:disabled { background:#333; color:#666; box-shadow:none; cursor:not-allowed; }
+
+#fileInput { display:none; }
+
+/* scrollbar */
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--sony-dim); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="sony-brand">
+    <div class="sony-logo">SONY</div>
+    <div class="fx3-badge">FX3</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="rec-dot" id="recDot" style="display:none"></div>
+    <div class="header-info">
+      <div>ILME-FX3 · FULL FRAME</div>
+      <div style="color:var(--sony-orange)">FE 70mm f/2.8 MACRO G</div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEWFINDER -->
+<div class="vf-wrap" id="vfWrap" onclick="handleVfClick()">
+  <canvas id="main"></canvas>
+  <div class="cinema-bar top"></div>
+  <div class="cinema-bar bot"></div>
+  <div class="vfc tl"></div><div class="vfc tr"></div>
+  <div class="vfc bl"></div><div class="vfc br"></div>
+  <div class="focus-zone" id="focusZone">
+    <div class="focus-ring-outer">
+      <div class="focus-ring-inner"></div>
+      <div class="focus-cross-h"></div>
+      <div class="focus-cross-v"></div>
+    </div>
+  </div>
+  <div class="hud" id="hud" style="display:none">
+    <div class="hud-left">
+      <span class="hud-stock" id="hudStock">KODAK 500T</span>
+      <span id="hudLens">70mm · f/2.8</span>
+    </div>
+    <div class="hud-right">
+      <span id="hudSensor">FULL FRAME</span>
+      <span id="hudFocus">∞ MF</span>
+    </div>
+  </div>
+  <div class="empty" id="emptyState">
+    <div class="lens-graphic">
+      <div class="lg-ring"></div>
+      <div class="lg-ring"></div>
+      <div class="lg-ring"></div>
+      <div class="lg-center"></div>
+    </div>
+    <div class="empty-label">CARGAR IMAGEN</div>
+    <div class="empty-sub">FX3 · 70mm · CINEMA</div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<!-- MODE TABS -->
+<div class="mode-tabs">
+  <button class="mode-tab active" data-tab="film" onclick="switchTab(this)">🎞 FILM</button>
+  <button class="mode-tab" data-tab="focus" onclick="switchTab(this)">◎ ENFOQUE</button>
+  <button class="mode-tab" data-tab="sensor" onclick="switchTab(this)">⬛ SENSOR</button>
+  <button class="mode-tab" data-tab="fx" onclick="switchTab(this)">✦ EFECTOS</button>
+</div>
+
+<!-- ══ TAB: FILM STOCKS ══ -->
+<div id="tab-film" class="tab-panel">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Film Stock · 35mm Cinema</span>
+      <div class="panel-line"></div>
+    </div>
+    <div class="stocks-grid" id="stocksGrid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Ajustes de Imagen</span>
+      <div class="panel-line"></div>
+    </div>
+    <div class="sliders-grid">
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">EXPOSICIÓN</span><span class="ctrl-val" id="vExp">0</span></div>
+        <input type="range" id="sExp" min="-100" max="100" value="0" oninput="render()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">CONTRASTE</span><span class="ctrl-val" id="vCon">0</span></div>
+        <input type="range" id="sCon" min="-100" max="100" value="0" oninput="render()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">ALTAS LUCES</span><span class="ctrl-val" id="vHi">0</span></div>
+        <input type="range" id="sHi" min="-100" max="100" value="0" oninput="render()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">SOMBRAS</span><span class="ctrl-val" id="vSh">0</span></div>
+        <input type="range" id="sSh" min="-100" max="100" value="0" oninput="render()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">COLOR</span><span class="ctrl-val" id="vSat">0</span></div>
+        <input type="range" id="sSat" min="-100" max="100" value="0" oninput="render()">
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><span class="ctrl-lbl">VIÑETA</span><span class="ctrl-val" id="vVig">40</span></div>
+        <input type="range" id="sVig" min="0" max="100" value="40" oninput="render()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: FOCUS ══ -->
+<div id="tab-focus" class="tab-panel" style="display:none">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Control de Enfoque · FE 70mm</span>
+      <div class="panel-line"></div>
+    </div>
+
+    <!-- Focus diagram -->
+    <div class="focus-panel">
+      <div class="focus-labels">
+        <span>0.27m</span><span>0.5m</span><span>1m</span><span>2m</span><span>5m</span><span>∞</span>
+      </div>
+      <div class="focus-diagram" id="focusDiagram">
+        <div class="focus-bg-gradient" id="focusBg"></div>
+        <div class="focus-needle" id="focusNeedle"></div>
+        <div class="focus-ruler">
+          <div class="ruler-tick major"></div>
+          <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          <div class="ruler-tick major"></div>
+          <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          <div class="ruler-tick major"></div>
+          <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          <div class="ruler-tick major"></div>
+          <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          <div class="ruler-tick major"></div>
+          <div class="ruler-tick"></div><div class="ruler-tick"></div><div class="ruler-tick"></div>
+          <div class="ruler-tick major"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="focus-dist" id="focusDistLabel">∞</span>
+        <span style="font-size:7px;letter-spacing:2px;color:var(--sony-silver)">70mm · MF</span>
+      </div>
+
+      <div class="focus-slider-row">
+        <span class="focus-slider-lbl">DISTANCIA</span>
+        <input type="range" id="sFocus" min="0" max="100" value="100" oninput="updateFocus()">
+      </div>
+    </div>
+
+    <!-- Bokeh intensity -->
+    <div class="focus-panel">
+      <div class="panel-header" style="margin-bottom:10px">
+        <span class="panel-title">Profundidad de Campo</span>
+        <div class="panel-line"></div>
+      </div>
+      <div class="ctrl-head" style="margin-bottom:8px">
+        <span class="ctrl-lbl">BOKEH (DoF)</span>
+        <span class="ctrl-val" id="vBlur">45</span>
+      </div>
+      <input type="range" id="sBlur" min="0" max="100" value="45" oninput="render()" style="margin-bottom:14px">
+
+      <!-- Aperture selector -->
+      <div class="panel-header" style="margin-bottom:8px">
+        <span class="panel-title">Apertura</span>
+        <div class="panel-line"></div>
+      </div>
+      <div class="aperture-ring" id="apertureRing">
+        <button class="aper-btn" data-f="1.4" onclick="selectAperture(this)">f/1.4</button>
+        <button class="aper-btn" data-f="1.8" onclick="selectAperture(this)">f/1.8</button>
+        <button class="aper-btn active" data-f="2.8" onclick="selectAperture(this)">f/2.8</button>
+        <button class="aper-btn" data-f="4" onclick="selectAperture(this)">f/4</button>
+        <button class="aper-btn" data-f="8" onclick="selectAperture(this)">f/8</button>
+        <button class="aper-btn" data-f="16" onclick="selectAperture(this)">f/16</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: SENSOR ══ -->
+<div id="tab-sensor" class="tab-panel" style="display:none">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Simulación de Sensor</span>
+      <div class="panel-line"></div>
+    </div>
+    <div class="sensor-grid" id="sensorGrid">
+      <div class="sensor-card active" data-sensor="ff" onclick="selectSensor(this)">
+        <div class="sensor-icon">▣</div>
+        <div class="sensor-name">FULL FRAME</div>
+        <div class="sensor-spec">35.6 × 23.8mm · BSI CMOS</div>
+        <div class="sensor-spec" style="margin-top:3px;color:var(--sony-orange)">12.1MP · ISO 80-102400</div>
+      </div>
+      <div class="sensor-card" data-sensor="apsc" onclick="selectSensor(this)">
+        <div class="sensor-icon">▪</div>
+        <div class="sensor-name">APS-C CROP</div>
+        <div class="sensor-spec">23.5 × 15.6mm · 1.5x</div>
+        <div class="sensor-spec" style="margin-top:3px;color:var(--sony-orange)">105mm equiv.</div>
+      </div>
+      <div class="sensor-card" data-sensor="s35" onclick="selectSensor(this)">
+        <div class="sensor-icon">◼</div>
+        <div class="sensor-name">SUPER 35</div>
+        <div class="sensor-spec">24.89 × 18.66mm</div>
+        <div class="sensor-spec" style="margin-top:3px;color:var(--sony-orange)">Cinema classic</div>
+      </div>
+      <div class="sensor-card" data-sensor="s16" onclick="selectSensor(this)">
+        <div class="sensor-icon">◾</div>
+        <div class="sensor-name">SUPER 16</div>
+        <div class="sensor-spec">12.52 × 7.41mm · 2.9x</div>
+        <div class="sensor-spec" style="margin-top:3px;color:var(--sony-orange)">Indie cinema look</div>
+      </div>
+    </div>
+
+    <!-- Noise / ISO simulation -->
+    <div style="margin-top:12px">
+      <div class="panel-header">
+        <span class="panel-title">Simulación ISO / Ruido</span>
+        <div class="panel-line"></div>
+      </div>
+      <div class="ctrl" style="margin-top:8px">
+        <div class="ctrl-head">
+          <span class="ctrl-lbl">ISO</span>
+          <span class="ctrl-val" id="vISO">800</span>
+        </div>
+        <input type="range" id="sISO" min="0" max="100" value="20" oninput="render()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB: EFFECTS ══ -->
+<div id="tab-fx" class="tab-panel" style="display:none">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Efectos Cinematográficos</span>
+      <div class="panel-line"></div>
+    </div>
+    <div class="fx-grid">
+      <button class="fx-btn" data-fx="grain" onclick="toggleFx(this)">
+        <span class="fx-icon">⣿</span>GRANO FILM
+      </button>
+      <button class="fx-btn" data-fx="halation" onclick="toggleFx(this)">
+        <span class="fx-icon">◉</span>HALACIÓN
+      </button>
+      <button class="fx-btn" data-fx="flare" onclick="toggleFx(this)">
+        <span class="fx-icon">✦</span>LENS FLARE
+      </button>
+      <button class="fx-btn" data-fx="scratch" onclick="toggleFx(this)">
+        <span class="fx-icon">╿</span>SCRATCHES
+      </button>
+      <button class="fx-btn" data-fx="bleach" onclick="toggleFx(this)">
+        <span class="fx-icon">◫</span>BLEACH BYPASS
+      </button>
+      <button class="fx-btn" data-fx="crossproc" onclick="toggleFx(this)">
+        <span class="fx-icon">⊕</span>CROSS PROC
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- INFO STRIP -->
+<div class="info-strip">
+  <div class="info-item">
+    <span class="info-key">STOCK</span>
+    <span class="info-val" id="infoStock" style="font-size:9px">K500T</span>
+  </div>
+  <div class="info-sep"></div>
+  <div class="info-item">
+    <span class="info-key">LENTE</span>
+    <span class="info-val" style="font-size:9px">70mm</span>
+  </div>
+  <div class="info-sep"></div>
+  <div class="info-item">
+    <span class="info-key">SENSOR</span>
+    <span class="info-val" id="infoSensor" style="font-size:9px">FF</span>
+  </div>
+  <div class="info-sep"></div>
+  <div class="info-item">
+    <span class="info-key">APERTURA</span>
+    <span class="info-val" id="infoAperture">f/2.8</span>
+  </div>
+  <div class="info-sep"></div>
+  <div class="info-item">
+    <span class="info-key">FOCO</span>
+    <span class="info-val" id="infoFocus">∞</span>
+  </div>
+</div>
+
+<!-- ACTIONS -->
+<div class="actions">
+  <button class="btn-load" onclick="document.getElementById('fileInput').click()">CARGAR</button>
+  <button class="btn-save" id="btnSave" disabled onclick="saveImage()">EXPORTAR PNG ↓</button>
+</div>
+
+<script>
+// ─── FILM STOCKS ──────────────────────────────────────────────────────────────
+const STOCKS = [
+  {
+    id:'k500t', name:'KODAK 500T', sub:'5219 · Tungsten', color:'#e8a020',
+    swatch:'linear-gradient(135deg,#f0c060,#c07820)',
+    fn(r,g,b){
+      // Kodak Vision3 500T: warm shadows, slight blue rolloff in highlights
+      const lum = L(r,g,b);
+      const shadow = Math.max(0, 1 - lum/120);
+      return {
+        r: cl(r*1.04 + shadow*12),
+        g: cl(g*0.98 + shadow*6),
+        b: cl(b*0.88 - shadow*4)
+      };
+    }
+  },
+  {
+    id:'k250d', name:'KODAK 250D', sub:'5207 · Daylight', color:'#60a860',
+    swatch:'linear-gradient(135deg,#80d080,#408040)',
+    fn(r,g,b){
+      // Kodak 250D: neutral, fine grain, slight green in mids
+      return {
+        r: cl(r*0.97 + 4),
+        g: cl(g*1.02 + 2),
+        b: cl(b*0.98)
+      };
+    }
+  },
+  {
+    id:'fuji50d', name:'FUJI 50D', sub:'8543 · Daylight', color:'#40a0d0',
+    swatch:'linear-gradient(135deg,#60c0f0,#2080b0)',
+    fn(r,g,b){
+      // Fujichrome: cool, saturated, punchy
+      const lum = L(r,g,b);
+      return {
+        r: cl(lum*0.12 + r*0.88 - 2),
+        g: cl(lum*0.10 + g*0.90 + 2),
+        b: cl(lum*0.08 + b*0.92 + 8)
+      };
+    }
+  },
+  {
+    id:'fuji400t', name:'FUJI 400T', sub:'8573 · Tungsten', color:'#8060c0',
+    swatch:'linear-gradient(135deg,#a080e0,#604090)',
+    fn(r,g,b){
+      const lum = L(r,g,b);
+      return {
+        r: cl(lum*0.15 + r*0.85 + 6),
+        g: cl(lum*0.18 + g*0.82 + 2),
+        b: cl(lum*0.12 + b*0.88 + 12)
+      };
+    }
+  },
+  {
+    id:'double_x', name:'DOUBLE-X', sub:'5222 · B&W', color:'#888',
+    swatch:'linear-gradient(135deg,#bbb,#555)',
+    fn(r,g,b){
+      // Kodak Double-X: high contrast panchromatic, heavy grain
+      const lum = 0.25*r + 0.65*g + 0.10*b;
+      const c = sCurveStrong(lum/255)*255;
+      return { r:c, g:c, b:c };
+    }
+  },
+  {
+    id:'ortho', name:'ORTHO+', sub:'Orthochromatic', color:'#a0b0c0',
+    swatch:'linear-gradient(135deg,#c0d0e0,#607080)',
+    fn(r,g,b){
+      // Orthochromatic: insensitive to red, blue sky dramatic
+      const lum = 0.05*r + 0.45*g + 0.50*b;
+      const c = cl(lum);
+      return { r:c, g:c, b:c };
+    }
+  },
+  {
+    id:'ektachrome', name:'EKTACHROME', sub:'E100 · Slide', color:'#c05050',
+    swatch:'linear-gradient(135deg,#e07070,#a03030)',
+    fn(r,g,b){
+      // Ektachrome: punchy, cool, high saturation
+      const lum = L(r,g,b);
+      const sat = 1.3;
+      return {
+        r: cl(lum + (r-lum)*sat * 0.98),
+        g: cl(lum + (g-lum)*sat * 1.00),
+        b: cl(lum + (b-lum)*sat * 1.08 + 4)
+      };
+    }
+  },
+  {
+    id:'cinestill800', name:'CINESTILL', sub:'800T · Halation', color:'#d04030',
+    swatch:'linear-gradient(135deg,#e86050,#902010)',
+    fn(r,g,b){
+      // CineStill 800T: warm, red halation, cinematic
+      const lum = L(r,g,b);
+      const hi = Math.max(0, lum - 180) / 75;
+      return {
+        r: cl(r*1.06 + hi*30 + 6),
+        g: cl(g*0.95 + 2),
+        b: cl(b*0.82 - 4)
+      };
+    }
+  },
+  {
+    id:'portra400', name:'PORTRA 400', sub:'Portrait · Warm', color:'#d09040',
+    swatch:'linear-gradient(135deg,#f0b860,#b07020)',
+    fn(r,g,b){
+      const lum = L(r,g,b);
+      const shadow = Math.max(0,1-lum/100)*0.5;
+      return {
+        r: cl(lum*0.08 + r*0.92 + 10 + shadow*8),
+        g: cl(lum*0.10 + g*0.90 + 4 + shadow*4),
+        b: cl(lum*0.15 + b*0.85 - 6)
+      };
+    }
+  },
+];
+
+function L(r,g,b){ return 0.299*r+0.587*g+0.114*b; }
+function cl(v){ return Math.min(255,Math.max(0,Math.round(v))); }
+function sCurveStrong(t){
+  return t<0.5 ? 2*t*t*t*4 : 1-Math.pow(-2*t+2,3)/2;
+}
+function sCurve(t){
+  return t<0.5 ? 2*t*t : -1+(4-2*t)*t;
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let img = null;
+let currentStock = 'k500t';
+let currentSensor = 'ff';
+let currentAperture = '2.8';
+let activeFx = new Set();
+let animFrame = null;
+
+// ─── BUILD FILM STOCK CARDS ───────────────────────────────────────────────────
+const stocksGrid = document.getElementById('stocksGrid');
+STOCKS.forEach(s => {
+  const card = document.createElement('div');
+  card.className = 'stock-card' + (s.id==='k500t'?' active':'');
+  card.style.setProperty('--stock-color', s.color);
+  card.dataset.id = s.id;
+  card.innerHTML = `
+    <div class="stock-swatch" style="background:${s.swatch}"></div>
+    <div class="stock-name">${s.name}</div>
+    <div class="stock-sub">${s.sub}</div>`;
+  card.onclick = () => selectStock(s.id, card);
+  stocksGrid.appendChild(card);
+});
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(btn) {
+  document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
+  btn.classList.add('active');
+  document.getElementById('tab-'+btn.dataset.tab).style.display='block';
+}
+
+// ─── SELECTORS ────────────────────────────────────────────────────────────────
+function selectStock(id, card) {
+  document.querySelectorAll('.stock-card').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  currentStock = id;
+  const s = STOCKS.find(x=>x.id===id);
+  document.getElementById('hudStock').textContent = s.name;
+  document.getElementById('infoStock').textContent = id.toUpperCase().slice(0,5);
+  if(img) render();
+}
+
+function selectSensor(card) {
+  document.querySelectorAll('.sensor-card').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  currentSensor = card.dataset.sensor;
+  const labels = {ff:'FF',apsc:'APS-C',s35:'S35',s16:'S16'};
+  document.getElementById('infoSensor').textContent = labels[currentSensor];
+  document.getElementById('hudSensor').textContent = card.querySelector('.sensor-name').textContent;
+  if(img) render();
+}
+
+function selectAperture(btn) {
+  document.querySelectorAll('.aper-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentAperture = btn.dataset.f;
+  const f = parseFloat(currentAperture);
+  // Map aperture to blur amount
+  const blurMap = {'1.4':85,'1.8':72,'2.8':45,'4':28,'8':12,'16':3};
+  document.getElementById('sBlur').value = blurMap[currentAperture]||45;
+  document.getElementById('vBlur').textContent = document.getElementById('sBlur').value;
+  document.getElementById('infoAperture').textContent = 'f/'+currentAperture;
+  document.getElementById('hudLens').textContent = '70mm · f/'+currentAperture;
+  if(img) render();
+}
+
+function toggleFx(btn) {
+  const fx = btn.dataset.fx;
+  if(activeFx.has(fx)){activeFx.delete(fx);btn.classList.remove('active');}
+  else{activeFx.add(fx);btn.classList.add('active');}
+  if(img) render();
+}
+
+// ─── FOCUS ────────────────────────────────────────────────────────────────────
+const FOCUS_DISTANCES = ['0.27m','0.35m','0.5m','0.7m','1m','1.5m','2m','3m','5m','10m','∞'];
+
+function updateFocus() {
+  const v = parseInt(document.getElementById('sFocus').value);
+  // Map 0-100 to distance labels
+  const idx = Math.round(v / 100 * (FOCUS_DISTANCES.length-1));
+  const dist = FOCUS_DISTANCES[idx];
+  document.getElementById('focusDistLabel').textContent = dist;
+  document.getElementById('infoFocus').textContent = dist;
+  document.getElementById('hudFocus').textContent = dist + ' MF';
+
+  // Move needle
+  const pct = v;
+  document.getElementById('focusNeedle').style.left = pct + '%';
+
+  // Update focus bg gradient
+  const fb = document.getElementById('focusBg');
+  const half = 8;
+  fb.style.setProperty('--fl', Math.max(0,pct-half)+'%');
+  fb.style.setProperty('--fc', Math.max(0,pct-half/2)+'%');
+  fb.style.setProperty('--fc2', Math.min(100,pct+half/2)+'%');
+  fb.style.setProperty('--fr', Math.min(100,pct+half)+'%');
+
+  // Move focus zone on viewfinder based on distance
+  const fz = document.getElementById('focusZone');
+  const size = Math.max(40, 100 - v*0.6);
+  fz.querySelector('.focus-ring-outer').style.width = size+'px';
+  fz.querySelector('.focus-ring-outer').style.height = size+'px';
+
+  if(img) render();
+}
+
+// ─── FILE LOAD ────────────────────────────────────────────────────────────────
+function handleVfClick() {
+  if(!img) document.getElementById('fileInput').click();
+}
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const i = new Image();
+    i.onload = () => {
+      img = i;
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('hud').style.display = 'flex';
+      document.getElementById('recDot').style.display = 'block';
+      document.getElementById('btnSave').disabled = false;
+      document.getElementById('btnSave').textContent = `PNG ${i.naturalWidth}×${i.naturalHeight} ↓`;
+      resizeCanvas();
+      render();
+    };
+    i.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+const canvas = document.getElementById('main');
+const ctx = canvas.getContext('2d', { willReadFrequently:true });
+
+function resizeCanvas() {
+  const wrap = document.getElementById('vfWrap');
+  const W = wrap.clientWidth * (window.devicePixelRatio||1);
+  const H = W * (9/16);
+  canvas.width = W; canvas.height = H;
+  canvas.style.width = wrap.clientWidth+'px';
+  canvas.style.height = (wrap.clientWidth*9/16)+'px';
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  updateAllLabels();
+  if(!img) return;
+  if(animFrame) cancelAnimationFrame(animFrame);
+  animFrame = requestAnimationFrame(doRender);
+}
+
+function updateAllLabels() {
+  const pairs = [['sExp','vExp'],['sCon','vCon'],['sHi','vHi'],['sSh','vSh'],['sSat','vSat'],['sVig','vVig'],['sBlur','vBlur']];
+  pairs.forEach(([s,v]) => {
+    const el = document.getElementById(v);
+    if(el) el.textContent = document.getElementById(s).value;
+  });
+  // ISO display
+  const isoV = parseInt(document.getElementById('sISO').value);
+  const isoStops = [80,100,160,200,320,400,640,800,1250,1600,3200,6400,12800,25600,51200,102400];
+  const isoIdx = Math.round(isoV/100*(isoStops.length-1));
+  document.getElementById('vISO').textContent = isoStops[isoIdx];
+}
+
+function doRender() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Draw with sensor crop simulation
+  drawWithSensorCrop(W, H);
+
+  // Read params
+  const exp  = +document.getElementById('sExp').value;
+  const con  = +document.getElementById('sCon').value;
+  const hi   = +document.getElementById('sHi').value;
+  const sh   = +document.getElementById('sSh').value;
+  const sat  = +document.getElementById('sSat').value;
+  const blur = +document.getElementById('sBlur').value;
+  const vig  = +document.getElementById('sVig').value;
+  const isoV = +document.getElementById('sISO').value;
+
+  // Film stock + image adjustments
+  applyFilmAndAdjust(W, H, exp, con, hi, sh, sat);
+
+  // Bokeh
+  if(blur > 0) applyBokeh(W, H, blur);
+
+  // Vignette
+  if(vig > 0) applyVignette(W, H, vig);
+
+  // Cinematic bars
+  drawCinemaBars(W, H);
+
+  // Flare
+  if(activeFx.has('flare')) applyFlare(W, H);
+
+  // Halation
+  if(activeFx.has('halation')) applyHalation(W, H);
+
+  // Bleach bypass
+  if(activeFx.has('bleach')) applyBleachBypass(W, H);
+
+  // Cross process
+  if(activeFx.has('crossproc')) applyCrossProcess(W, H);
+
+  // Film grain
+  if(activeFx.has('grain')) applyGrain(W, H);
+
+  // Scratches
+  if(activeFx.has('scratch')) applyScratches(W, H);
+
+  // ISO noise
+  if(isoV > 40) applyISONoise(W, H, isoV);
+}
+
+function drawWithSensorCrop(W, H) {
+  const crops = {ff:1.0, apsc:0.78, s35:0.85, s16:0.55};
+  const c = crops[currentSensor] || 1.0;
+  const sw = img.naturalWidth * c;
+  const sh2 = img.naturalHeight * c;
+  const sx = (img.naturalWidth - sw) / 2;
+  const sy = (img.naturalHeight - sh2) / 2;
+  ctx.drawImage(img, sx, sy, sw, sh2, 0, 0, W, H);
+}
+
+// ─── FILM + ADJUST ────────────────────────────────────────────────────────────
+function applyFilmAndAdjust(W, H, exp, con, hi, sh, sat) {
+  const stock = STOCKS.find(s=>s.id===currentStock);
+  const imageData = ctx.getImageData(0,0,W,H);
+  const d = imageData.data;
+  const expF=exp/100, conF=con/100, satF=sat/100;
+
+  for(let i=0; i<d.length; i+=4) {
+    let r=d[i], g=d[i+1], b=d[i+2];
+
+    // Film stock color science
+    const o = stock.fn(r,g,b);
+    r=o.r; g=o.g; b=o.b;
+
+    // Exposure
+    if(exp!==0){
+      const ef = expF>0 ? 1+expF*1.5 : 1+expF;
+      r=cl(r*ef); g=cl(g*ef); b=cl(b*ef);
+    }
+
+    // Contrast S-curve
+    if(con!==0){
+      r=contrastCurve(r,conF);
+      g=contrastCurve(g,conF);
+      b=contrastCurve(b,conF);
+    }
+
+    // Highlights
+    if(hi!==0){
+      const lum=L(r,g,b);
+      const t=Math.max(0,(lum-160)/95);
+      const adj=hi*0.6*t;
+      r=cl(r+adj); g=cl(g+adj); b=cl(b+adj);
+    }
+
+    // Shadows
+    if(sh!==0){
+      const lum=L(r,g,b);
+      const t=Math.max(0,1-lum/100);
+      const adj=sh*0.5*t;
+      r=cl(r+adj); g=cl(g+adj); b=cl(b+adj);
+    }
+
+    // Saturation
+    if(sat!==0){
+      const lum=L(r,g,b);
+      const sf=1+satF;
+      r=cl(lum+(r-lum)*sf);
+      g=cl(lum+(g-lum)*sf);
+      b=cl(lum+(b-lum)*sf);
+    }
+
+    d[i]=r; d[i+1]=g; d[i+2]=b;
+  }
+  ctx.putImageData(imageData,0,0);
+}
+
+function contrastCurve(v, c) {
+  v=v/255;
+  if(c>0) v = v<0.5 ? 0.5*Math.pow(2*v,1+c*1.2) : 1-0.5*Math.pow(2*(1-v),1+c*1.2);
+  else v = v + c*0.5*v*(1-v)*4;
+  return cl(v*255);
+}
+
+// ─── BOKEH ────────────────────────────────────────────────────────────────────
+function applyBokeh(W, H, amount) {
+  const focusV = parseInt(document.getElementById('sFocus').value);
+  // Focus point shifts based on focus distance slider
+  const cx = W*0.5;
+  const cy = H*(0.3 + focusV/100*0.4); // focus point moves up/down
+  const focusR = Math.min(W,H) * (0.15 + (100-amount)/100 * 0.25);
+
+  const sharp = ctx.getImageData(0,0,W,H);
+  const radius = Math.round((amount/100)*24);
+  ctx.filter = `blur(${radius}px)`;
+  ctx.drawImage(canvas,0,0);
+  ctx.filter = 'none';
+  const blurred = ctx.getImageData(0,0,W,H);
+
+  const out = ctx.createImageData(W,H);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) {
+    const idx=(y*W+x)*4;
+    const dist=Math.sqrt((x-cx)**2+(y-cy)**2);
+    let t=Math.max(0,Math.min(1,(dist-focusR)/(focusR*1.2)));
+    t=t*t*(3-2*t);
+    out.data[idx]  =sharp.data[idx]  *(1-t)+blurred.data[idx]  *t;
+    out.data[idx+1]=sharp.data[idx+1]*(1-t)+blurred.data[idx+1]*t;
+    out.data[idx+2]=sharp.data[idx+2]*(1-t)+blurred.data[idx+2]*t;
+    out.data[idx+3]=255;
+  }
+  ctx.putImageData(out,0,0);
+}
+
+// ─── VIGNETTE ─────────────────────────────────────────────────────────────────
+function applyVignette(W, H, amount) {
+  const cx=W/2, cy=H/2, r=Math.sqrt(cx*cx+cy*cy);
+  const alpha=(amount/100)*0.82;
+  const g=ctx.createRadialGradient(cx,cy,r*0.35,cx,cy,r*1.05);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(0.65,`rgba(0,0,0,${alpha*0.25})`);
+  g.addColorStop(1,`rgba(0,0,0,${alpha})`);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+// ─── CINEMA BARS ──────────────────────────────────────────────────────────────
+function drawCinemaBars(W, H) {
+  const barH = Math.round(H * 0.08);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,W,barH);
+  ctx.fillRect(0,H-barH,W,barH);
+}
+
+// ─── LENS FLARE (Sony FE 70mm) ────────────────────────────────────────────────
+function applyFlare(W, H) {
+  ctx.save();
+  // Primary flare
+  const g1 = ctx.createRadialGradient(W*0.65,H*0.28,0,W*0.65,H*0.28,W*0.25);
+  g1.addColorStop(0,'rgba(255,160,80,0.12)');
+  g1.addColorStop(0.4,'rgba(255,200,100,0.06)');
+  g1.addColorStop(1,'transparent');
+  ctx.fillStyle=g1; ctx.globalAlpha=1;
+  ctx.fillRect(0,0,W,H);
+  // Ghost flare
+  const g2 = ctx.createRadialGradient(W*0.35,H*0.7,0,W*0.35,H*0.7,W*0.1);
+  g2.addColorStop(0,'rgba(100,150,255,0.08)');
+  g2.addColorStop(1,'transparent');
+  ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+  // Streak
+  ctx.globalAlpha=0.035;
+  const streak=ctx.createLinearGradient(0,H*0.3,W,H*0.3);
+  streak.addColorStop(0,'transparent');
+  streak.addColorStop(0.5,'rgba(255,220,150,1)');
+  streak.addColorStop(1,'transparent');
+  ctx.fillStyle=streak;
+  ctx.fillRect(0,H*0.28,W,H*0.06);
+  ctx.restore();
+}
+
+// ─── HALATION ─────────────────────────────────────────────────────────────────
+function applyHalation(W, H) {
+  const imageData=ctx.getImageData(0,0,W,H);
+  const d=imageData.data;
+  const hal=ctx.createImageData(W,H);
+  const hd=hal.data;
+  for(let i=0;i<d.length;i+=4){
+    const lum=L(d[i],d[i+1],d[i+2]);
+    if(lum>200){
+      const t=(lum-200)/55;
+      hd[i]  =cl(d[i]+90*t);
+      hd[i+1]=cl(d[i+1]*(1-t*0.5));
+      hd[i+2]=cl(d[i+2]*(1-t*0.7));
+      hd[i+3]=cl(180*t);
+    }
+  }
+  const tmp=document.createElement('canvas');
+  tmp.width=W; tmp.height=H;
+  const tc=tmp.getContext('2d');
+  tc.putImageData(hal,0,0);
+  tc.filter=`blur(${Math.round(W*0.015)}px)`;
+  tc.drawImage(tmp,0,0);
+  ctx.save();
+  ctx.globalCompositeOperation='screen';
+  ctx.globalAlpha=0.5;
+  ctx.drawImage(tmp,0,0);
+  ctx.restore();
+}
+
+// ─── BLEACH BYPASS ────────────────────────────────────────────────────────────
+function applyBleachBypass(W, H) {
+  const imageData=ctx.getImageData(0,0,W,H);
+  const d=imageData.data;
+  for(let i=0;i<d.length;i+=4){
+    const lum=L(d[i],d[i+1],d[i+2]);
+    // High contrast + desaturate
+    const blend=0.55;
+    d[i]  =cl(d[i]*(1-blend)+lum*blend*1.1);
+    d[i+1]=cl(d[i+1]*(1-blend)+lum*blend*1.05);
+    d[i+2]=cl(d[i+2]*(1-blend)+lum*blend);
+    // Contrast boost
+    d[i]  =contrastCurve(d[i],0.5);
+    d[i+1]=contrastCurve(d[i+1],0.5);
+    d[i+2]=contrastCurve(d[i+2],0.5);
+  }
+  ctx.putImageData(imageData,0,0);
+}
+
+// ─── CROSS PROCESS ────────────────────────────────────────────────────────────
+function applyCrossProcess(W, H) {
+  const imageData=ctx.getImageData(0,0,W,H);
+  const d=imageData.data;
+  for(let i=0;i<d.length;i+=4){
+    // Classic E6→C41 cross process: pushed greens/yellows, crushed blues
+    d[i]  =cl(contrastCurve(d[i],0.4)*1.05);
+    d[i+1]=cl(d[i+1]*1.12);
+    d[i+2]=cl(d[i+2]*0.75);
+  }
+  ctx.putImageData(imageData,0,0);
+}
+
+// ─── GRAIN ────────────────────────────────────────────────────────────────────
+function applyGrain(W, H) {
+  const imageData=ctx.getImageData(0,0,W,H);
+  const d=imageData.data;
+  // Double-X and Portra have different grain character
+  const isHeavy = currentStock==='double_x'||currentStock==='cinestill800';
+  const amount = isHeavy ? 28 : 16;
+  for(let i=0;i<d.length;i+=4){
+    const lum=L(d[i],d[i+1],d[i+2]);
+    const s=1-Math.pow(lum/255,1.8);
+    const n=(Math.random()-0.5)*amount*s*2;
+    d[i]  =cl(d[i]+n);
+    d[i+1]=cl(d[i+1]+n*0.92);
+    d[i+2]=cl(d[i+2]+n*0.85);
+  }
+  ctx.putImageData(imageData,0,0);
+}
+
+// ─── SCRATCHES ────────────────────────────────────────────────────────────────
+function applyScratches(W, H) {
+  ctx.save();
+  ctx.globalAlpha=0.35;
+  for(let i=0;i<4;i++){
+    const x=Math.random()*W;
+    const yStart=Math.random()*H*0.2;
+    const yEnd=H-Math.random()*H*0.2;
+    const width=0.5+Math.random()*1.5;
+    ctx.strokeStyle=`rgba(255,255,255,${0.1+Math.random()*0.25})`;
+    ctx.lineWidth=width;
+    ctx.beginPath();
+    ctx.moveTo(x,yStart);
+    // Slight curve
+    ctx.quadraticCurveTo(x+(Math.random()-0.5)*10, H/2, x+(Math.random()-0.5)*8, yEnd);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─── ISO NOISE ────────────────────────────────────────────────────────────────
+function applyISONoise(W, H, isoV) {
+  const imageData=ctx.getImageData(0,0,W,H);
+  const d=imageData.data;
+  const noiseLevel = (isoV-40)/60 * 22;
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()-0.5)*noiseLevel;
+    d[i]  =cl(d[i]+n);
+    d[i+1]=cl(d[i+1]+n*0.9);
+    d[i+2]=cl(d[i+2]+n*0.8+n*0.2);
+  }
+  ctx.putImageData(imageData,0,0);
+}
+
+// ─── SAVE (full resolution) ────────────────────────────────────────────────────
+async function saveImage() {
+  const btn=document.getElementById('btnSave');
+  btn.disabled=true; btn.textContent='PROCESANDO…';
+  await new Promise(r=>setTimeout(r,60));
+
+  try {
+    const OW=img.naturalWidth, OH=img.naturalHeight;
+    const off=document.createElement('canvas');
+    off.width=OW; off.height=OH;
+    const oc=off.getContext('2d',{willReadFrequently:true});
+
+    // Sensor crop on offscreen
+    const crops={ff:1.0,apsc:0.78,s35:0.85,s16:0.55};
+    const c=crops[currentSensor]||1.0;
+    const sw=OW*c, sh2=OH*c;
+    const sx=(OW-sw)/2, sy=(OH-sh2)/2;
+    oc.drawImage(img,sx,sy,sw,sh2,0,0,OW,OH);
+
+    const exp=+document.getElementById('sExp').value;
+    const con=+document.getElementById('sCon').value;
+    const hi=+document.getElementById('sHi').value;
+    const sh=+document.getElementById('sSh').value;
+    const sat=+document.getElementById('sSat').value;
+    const blur=+document.getElementById('sBlur').value;
+    const vig=+document.getElementById('sVig').value;
+    const isoV=+document.getElementById('sISO').value;
+
+    applyFilmAndAdjustTo(oc,OW,OH,exp,con,hi,sh,sat);
+    if(blur>0) applyBokehTo(oc,OW,OH,blur);
+    if(vig>0) applyVignetteTo(oc,OW,OH,vig);
+    drawCinemaBarsTo(oc,OW,OH);
+    if(activeFx.has('flare')) applyFlareTo(oc,OW,OH);
+    if(activeFx.has('halation')) applyHalationTo(oc,OW,OH);
+    if(activeFx.has('bleach')) applyBleachTo(oc,OW,OH);
+    if(activeFx.has('crossproc')) applyCrossTo(oc,OW,OH);
+    if(activeFx.has('grain')) applyGrainTo(oc,OW,OH);
+    if(activeFx.has('scratch')) applyScratchesTo(oc,OW,OH);
+    if(isoV>40) applyISOTo(oc,OW,OH,isoV);
+
+    const link=document.createElement('a');
+    link.download=`sonyfx3-${currentStock}-70mm-${OW}x${OH}.png`;
+    link.href=off.toDataURL('image/png');
+    link.click();
+  } finally {
+    btn.disabled=false;
+    btn.textContent=`PNG ${img.naturalWidth}×${img.naturalHeight} ↓`;
+  }
+}
+
+// Offscreen versions
+function applyFilmAndAdjustTo(oc,W,H,exp,con,hi,sh,sat){
+  const stock=STOCKS.find(s=>s.id===currentStock);
+  const imageData=oc.getImageData(0,0,W,H); const d=imageData.data;
+  const expF=exp/100,conF=con/100,satF=sat/100;
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i],g=d[i+1],b=d[i+2];
+    const o=stock.fn(r,g,b); r=o.r;g=o.g;b=o.b;
+    if(exp!==0){const ef=expF>0?1+expF*1.5:1+expF;r=cl(r*ef);g=cl(g*ef);b=cl(b*ef);}
+    if(con!==0){r=contrastCurve(r,conF);g=contrastCurve(g,conF);b=contrastCurve(b,conF);}
+    if(hi!==0){const lum=L(r,g,b);const t=Math.max(0,(lum-160)/95);const adj=hi*0.6*t;r=cl(r+adj);g=cl(g+adj);b=cl(b+adj);}
+    if(sh!==0){const lum=L(r,g,b);const t=Math.max(0,1-lum/100);const adj=sh*0.5*t;r=cl(r+adj);g=cl(g+adj);b=cl(b+adj);}
+    if(sat!==0){const lum=L(r,g,b);const sf=1+satF;r=cl(lum+(r-lum)*sf);g=cl(lum+(g-lum)*sf);b=cl(lum+(b-lum)*sf);}
+    d[i]=r;d[i+1]=g;d[i+2]=b;
+  }
+  oc.putImageData(imageData,0,0);
+}
+function applyBokehTo(oc,W,H,amount){
+  const focusV=parseInt(document.getElementById('sFocus').value);
+  const cx=W*0.5,cy=H*(0.3+focusV/100*0.4),focusR=Math.min(W,H)*(0.15+(100-amount)/100*0.25);
+  const sharp=oc.getImageData(0,0,W,H);
+  const radius=Math.round((amount/100)*24);
+  oc.filter=`blur(${radius}px)`;oc.drawImage(oc.canvas,0,0);oc.filter='none';
+  const blurred=oc.getImageData(0,0,W,H);
+  const out=oc.createImageData(W,H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const idx=(y*W+x)*4;
+    const dist=Math.sqrt((x-cx)**2+(y-cy)**2);
+    let t=Math.max(0,Math.min(1,(dist-focusR)/(focusR*1.2)));t=t*t*(3-2*t);
+    out.data[idx]=sharp.data[idx]*(1-t)+blurred.data[idx]*t;
+    out.data[idx+1]=sharp.data[idx+1]*(1-t)+blurred.data[idx+1]*t;
+    out.data[idx+2]=sharp.data[idx+2]*(1-t)+blurred.data[idx+2]*t;
+    out.data[idx+3]=255;
+  }
+  oc.putImageData(out,0,0);
+}
+function applyVignetteTo(oc,W,H,amount){
+  const cx=W/2,cy=H/2,r=Math.sqrt(cx*cx+cy*cy),alpha=(amount/100)*0.82;
+  const g=oc.createRadialGradient(cx,cy,r*0.35,cx,cy,r*1.05);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(0.65,`rgba(0,0,0,${alpha*0.25})`);g.addColorStop(1,`rgba(0,0,0,${alpha})`);
+  oc.fillStyle=g;oc.fillRect(0,0,W,H);
+}
+function drawCinemaBarsTo(oc,W,H){const barH=Math.round(H*0.08);oc.fillStyle='#000';oc.fillRect(0,0,W,barH);oc.fillRect(0,H-barH,W,barH);}
+function applyFlareTo(oc,W,H){oc.save();const g1=oc.createRadialGradient(W*0.65,H*0.28,0,W*0.65,H*0.28,W*0.25);g1.addColorStop(0,'rgba(255,160,80,0.12)');g1.addColorStop(0.4,'rgba(255,200,100,0.06)');g1.addColorStop(1,'transparent');oc.fillStyle=g1;oc.fillRect(0,0,W,H);oc.restore();}
+function applyHalationTo(oc,W,H){const imageData=oc.getImageData(0,0,W,H);const d=imageData.data;const hal=oc.createImageData(W,H);const hd=hal.data;for(let i=0;i<d.length;i+=4){const lum=L(d[i],d[i+1],d[i+2]);if(lum>200){const t=(lum-200)/55;hd[i]=cl(d[i]+90*t);hd[i+1]=cl(d[i+1]*(1-t*0.5));hd[i+2]=cl(d[i+2]*(1-t*0.7));hd[i+3]=cl(180*t);}}const tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;const tc=tmp.getContext('2d');tc.putImageData(hal,0,0);tc.filter=`blur(${Math.round(W*0.015)}px)`;tc.drawImage(tmp,0,0);oc.save();oc.globalCompositeOperation='screen';oc.globalAlpha=0.5;oc.drawImage(tmp,0,0);oc.restore();}
+function applyBleachTo(oc,W,H){const imageData=oc.getImageData(0,0,W,H);const d=imageData.data;for(let i=0;i<d.length;i+=4){const lum=L(d[i],d[i+1],d[i+2]);const blend=0.55;d[i]=cl(d[i]*(1-blend)+lum*blend*1.1);d[i+1]=cl(d[i+1]*(1-blend)+lum*blend*1.05);d[i+2]=cl(d[i+2]*(1-blend)+lum*blend);d[i]=contrastCurve(d[i],0.5);d[i+1]=contrastCurve(d[i+1],0.5);d[i+2]=contrastCurve(d[i+2],0.5);}oc.putImageData(imageData,0,0);}
+function applyCrossTo(oc,W,H){const imageData=oc.getImageData(0,0,W,H);const d=imageData.data;for(let i=0;i<d.length;i+=4){d[i]=cl(contrastCurve(d[i],0.4)*1.05);d[i+1]=cl(d[i+1]*1.12);d[i+2]=cl(d[i+2]*0.75);}oc.putImageData(imageData,0,0);}
+function applyGrainTo(oc,W,H){const imageData=oc.getImageData(0,0,W,H);const d=imageData.data;const isHeavy=currentStock==='double_x'||currentStock==='cinestill800';const amount=isHeavy?28:16;for(let i=0;i<d.length;i+=4){const lum=L(d[i],d[i+1],d[i+2]);const s=1-Math.pow(lum/255,1.8);const n=(Math.random()-0.5)*amount*s*2;d[i]=cl(d[i]+n);d[i+1]=cl(d[i+1]+n*0.92);d[i+2]=cl(d[i+2]+n*0.85);}oc.putImageData(imageData,0,0);}
+function applyScratchesTo(oc,W,H){oc.save();oc.globalAlpha=0.35;for(let i=0;i<4;i++){const x=Math.random()*W;oc.strokeStyle=`rgba(255,255,255,${0.1+Math.random()*0.25})`;oc.lineWidth=0.5+Math.random()*1.5;oc.beginPath();oc.moveTo(x,0);oc.lineTo(x+(Math.random()-0.5)*20,H);oc.stroke();}oc.restore();}
+function applyISOTo(oc,W,H,isoV){const imageData=oc.getImageData(0,0,W,H);const d=imageData.data;const noiseLevel=(isoV-40)/60*22;for(let i=0;i<d.length;i+=4){const n=(Math.random()-0.5)*noiseLevel;d[i]=cl(d[i]+n);d[i+1]=cl(d[i+1]+n*0.9);d[i+2]=cl(d[i+2]+n*0.8+n*0.2);}oc.putImageData(imageData,0,0);}
+
+// ─── PWA ──────────────────────────────────────────────────────────────────────
+const manifest={name:"Sony FX3 Cinema",short_name:"FX3",start_url:"./",display:"standalone",background_color:"#0a0a0a",theme_color:"#ff6a00",icons:[{src:"data:image/svg+xml,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230a0a0a'/><rect x='20' y='20' width='152' height='152' rx='28' fill='%23181818'/><circle cx='96' cy='96' r='40' fill='none' stroke='%23ff6a00' stroke-width='3'/><circle cx='96' cy='96' r='22' fill='none' stroke='%23ff6a00' stroke-width='1.5'/><circle cx='96' cy='96' r='8' fill='%23ff6a00'/><text x='96' y='160' font-family='Arial Black' font-size='14' fill='%23fff' text-anchor='middle' font-weight='900' letter-spacing='4'>FX3</text></svg>`),sizes:"192x192",type:"image/svg+xml",purpose:"any maskable"}]};
+const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+document.getElementById('manifestLink').href=URL.createObjectURL(blob);
+
+if('serviceWorker' in navigator){
+  const sw=`const C='fx3-v1';self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['./','/index.html'])).then(()=>self.skipWaiting()))});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>{if(r)return r;return fetch(e.request).then(res=>{if(res&&res.status===200){const c=res.clone();caches.open(C).then(ca=>ca.put(e.request,c))}return res}).catch(()=>caches.match('./index.html'))}))});`;
+  const swBlob=new Blob([sw],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob),{scope:'./'}).catch(()=>{});
+}
+
+// Init
+updateFocus();
+updateAllLabels();
+</script>
+</body>
+</html>
